@@ -51,7 +51,8 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-of
 @media(max-width:860px){body{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
 
 /* 기출 연도 뱃지 */
-.badge{display:inline-block;padding:.05rem .45rem;border-radius:999px;background:var(--accent-bg);color:var(--accent);font-size:.78rem;font-weight:650;line-height:1.6;white-space:nowrap}
+.badge{display:inline-block;padding:.05rem .45rem;border-radius:999px;background:var(--accent-bg);color:var(--accent);font-size:.78rem;font-weight:650;line-height:1.6;white-space:nowrap;text-decoration:none}
+a.badge:hover{background:var(--accent);color:var(--panel)}
 .badges{display:inline-flex;flex-wrap:wrap;gap:.3rem;margin-left:.6rem;vertical-align:middle}
 h1 .badges{margin-left:.75rem}
 .nav-exam{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:1rem 0 0;padding:.55rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);max-width:none}
@@ -78,6 +79,17 @@ h1 .badges{margin-left:.75rem}
 .qa .a table{font-size:.9rem}
 
 /* 기출 모아보기 */
+.year-grid{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.8rem;padding:0;margin:1.5rem 0;max-width:none}
+.year-grid a{display:flex;flex-direction:column;gap:.15rem;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;color:var(--ink);height:100%}
+.year-grid a:hover{border-color:var(--accent);background:var(--accent-bg)}
+.year-grid strong{font-size:1.05rem}
+.year-grid span{color:var(--accent);font-size:.9rem;font-weight:600}
+.year-grid em{color:var(--mute);font-size:.8rem;font-style:normal}
+.year-tabs{display:flex;flex-wrap:wrap;gap:.35rem;margin:1rem 0 1.5rem;max-width:none}
+.year-tabs a{padding:.2rem .6rem;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--mute);font-size:.85rem;text-decoration:none}
+.year-tabs a:hover{border-color:var(--accent);color:var(--accent)}
+.year-tabs a.on{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:650}
+.q-note{margin:-.2rem 0 .6rem;color:var(--mute);font-size:.84rem;max-width:none}
 .exam-year{margin-top:2.5rem}
 .exam-year h2{display:flex;align-items:center;gap:.5rem;padding-bottom:.4rem;border-bottom:1px solid var(--line)}
 .exam-card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:.9rem 1.1rem;margin:.9rem 0}
@@ -92,3 +104,5 @@ h1 .badges{margin-left:.75rem}
 .exam-card .to-concept{margin:.6rem 0 0;font-size:.86rem;max-width:none}
 .exam-card .to-concept a{text-decoration:none}
 @media(max-width:860px){.badges{margin-left:.4rem}}
+
+.q-code{margin:.2rem 0 .9rem}

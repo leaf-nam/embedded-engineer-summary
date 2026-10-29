@@ -121,6 +121,13 @@ Q^{+}=D \qquad Q^{+}=J\bar{Q}+\bar{K}Q \qquad Q^{+}=T\oplus Q
 - **NAND Flash**는 집적도가 높고 블록 단위 접근에 유리해 대용량 저장에 쓴다. **NOR Flash**는 랜덤 액세스가 가능해 코드 실행(XIP)에 유리하다.
 - Flash는 쓰기 전에 지워야 하며, 지우기 횟수에 수명 제한이 있어 **웨어 레벨링**을 사용한다.
 
+**엔디언(Endian)** 은 여러 바이트를 메모리에 저장하는 순서다.
+
+- **빅 엔디언(Big Endian)**: 상위 바이트를 낮은 주소에 저장한다. `0xA46B` → `1000`: `0xA4`, `1001`: `0x6B`
+- **리틀 엔디언(Little Endian)**: 하위 바이트를 낮은 주소에 저장한다. `0xA46B` → `1000`: `0x6B`, `1001`: `0xA4`
+- 네트워크 바이트 순서는 빅 엔디언을 사용하므로 `htons()`, `htonl()`로 변환한다.
+- 정렬(Alignment)을 맞추기 위해 구조체에 패딩이 들어갈 수 있으므로 `sizeof`와 `offsetof`로 확인한다.
+
 **메모리 용량 계산**은 주소선과 데이터선으로 구한다.
 
 \[
@@ -840,6 +847,9 @@ pthread_join(tid, NULL);
 **TCP**는 연결 지향, 신뢰성, 순서 보장, 흐름·혼잡 제어를 제공한다. **UDP**는 비연결, 빠름, 순서·신뢰성 미보장이다.
 
 TCP 서버 흐름은 `socket()` → `bind()` → `listen()` → `accept()` → `read/write()` → `close()` 순서다. 클라이언트는 `socket()` → `connect()` → `read/write()` → `close()` 순서다.
+
+**연결 수립(3-Way Handshake)**: SYN → SYN+ACK → ACK. 시퀀스 번호에 1을 더해 응답한다.
+**연결 해제(4-Way Handshake)**: FIN → ACK → FIN → ACK.
 
 ```c
 int sock = socket(AF_INET, SOCK_STREAM, 0);
