@@ -180,6 +180,18 @@ def badges_html(years):
     return '<span class="badges">' + "".join(year_link(y) for y in ys) + "</span>"
 
 
+def exam_count(node):
+    """해당 항목과 하위 항목에 연결된 기출 문항 수."""
+    return sum(len(EXAM_MAP.get(n.title, [])) for n in (node, *walk(node)))
+
+
+def count_pill(node, cls="toc-count"):
+    c = exam_count(node)
+    if not c:
+        return ""
+    return f'<span class="{cls}" title="기출 {c}문항">{c}</span>'
+
+
 def code_html(entry):
     return "".join(
         f'<pre class="q-code"><code>{html.escape(c)}</code></pre>'
@@ -233,17 +245,31 @@ def link(n, cls=""):
     return f'<a{c} href="{n.slug}.html">{html.escape(n.title)}</a>'
 
 
+def nav_link(n):
+    return (
+        f'<a href="{n.slug}.html"><span class="t">{html.escape(n.title)}</span>'
+        f"{count_pill(n)}</a>"
+    )
+
+
 def nav_html(root, cur):
     here = cur.chapter() if cur.level else None
     out = ["<ul>"]
     for ch in root.children:
         on = ' class="on"' if ch is here else ""
-        out.append(f"<li{on}>{link(ch)}")
+        out.append(f"<li{on}>{nav_link(ch)}")
         if ch is here and ch.children:
             out.append("<ul>")
             for s in ch.children:
                 cls = "on" if s is cur or s is cur.parent else ""
-                out.append(f'<li class="{cls}">{link(s)}</li>')
+                out.append(f'<li class="{cls}">{nav_link(s)}')
+                if (s is cur or s is cur.parent) and s.children:
+                    out.append("<ul>")
+                    for c in s.children:
+                        ccls = "on" if c is cur else ""
+                        out.append(f'<li class="{ccls}">{nav_link(c)}</li>')
+                    out.append("</ul>")
+                out.append("</li>")
             out.append("</ul>")
         out.append("</li>")
     out.append("</ul>")
@@ -259,7 +285,7 @@ def kids_html(node):
     if not node.children:
         return ""
     items = "".join(
-        f'<li><span class="kid-head">{link(c)}{badges_html(exam_years(c))}</span>'
+        f'<li><span class="kid-head">{link(c)}{count_pill(c)}{badges_html(exam_years(c))}</span>'
         f'<span>{html.escape(excerpt(c))}</span></li>'
         for c in node.children
     )
@@ -320,8 +346,8 @@ def build():
         )
     home += render(root.body) if root.body else ""
     for ch in root.children:
-        secs = "".join(f"<li>{link(s)}</li>" for s in ch.children)
-        home += f'<section class="chap"><h2>{link(ch)}</h2>' + (f"<ul>{secs}</ul>" if secs else f"<p>{html.escape(excerpt(ch))}</p>") + "</section>"
+        secs = "".join(f"<li>{link(s)}{count_pill(s)}</li>" for s in ch.children)
+        home += f'<section class="chap"><h2>{link(ch)}{count_pill(ch)}</h2>' + (f"<ul>{secs}</ul>" if secs else f"<p>{html.escape(excerpt(ch))}</p>") + "</section>"
     write(root, home, "", "", site)
 
     for i, n in enumerate(order):
