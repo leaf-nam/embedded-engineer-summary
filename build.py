@@ -6,11 +6,13 @@
   python build.py --stubs        # 모든 페이지의 확장 노트(extra/<slug>.md) 빈 파일 생성
   python build.py path/to/x.md   # 다른 원본 파일 사용
 """
-import html, pathlib, re, shutil, sys
+import html, json, pathlib, re, shutil, sys
 import markdown
 
 ROOT = pathlib.Path(__file__).parent
 EXTRA, OUT, ASSETS = ROOT / "extra", ROOT / "site", ROOT / "assets"
+EXAMS = ROOT / "content" / "exams.json"
+ALL_EXAMS, EXAM_MAP = [], {}
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 SRC = pathlib.Path(args[0]) if args else ROOT / "content" / "summary.md"
 
@@ -108,6 +110,74 @@ def extra_html(slug):
     return f'<section class="extra"><h2>확장 노트</h2>{render(t)}</section>' if t else ""
 
 
+def load_exams(order):
+    """content/exams.json 을 읽어 개념 제목별 기출 문항 맵을 만든다."""
+    global ALL_EXAMS, EXAM_MAP
+    if not EXAMS.exists():
+        return
+    data = json.loads(EXAMS.read_text(encoding="utf-8"))
+    nodes = {n.title: n for n in order}
+    exam_map, all_items = {}, []
+    for exam in data.get("exams", []):
+        year = exam.get("year")
+        label = exam.get("label") or f"{year}년"
+        for item in exam.get("items", []):
+            key = item.get("concept", "")
+            node = nodes.get(key)
+            if node is None:
+                print(f"경고: 기출 개념을 찾을 수 없습니다: {key}")
+                continue
+            answer = item.get("answer", "")
+            if isinstance(answer, list):
+                answer = "\n".join(answer)
+            entry = {
+                "year": year,
+                "label": label,
+                "no": item.get("no"),
+                "question": item.get("question", ""),
+                "answer": answer,
+                "node": node,
+            }
+            exam_map.setdefault(key, []).append(entry)
+            all_items.append(entry)
+    ALL_EXAMS, EXAM_MAP = all_items, exam_map
+
+
+def exam_years(node):
+    return sorted({e["year"] for e in EXAM_MAP.get(node.title, []) if e.get("year")}, reverse=True)
+
+
+def badges_html(years):
+    ys = sorted({y for y in years if y}, reverse=True)
+    if not ys:
+        return ""
+    return '<span class="badges">' + "".join(
+        f'<span class="badge" title="{y}년 기출">{y}</span>' for y in ys
+    ) + "</span>"
+
+
+def exam_html(node):
+    items = sorted(
+        EXAM_MAP.get(node.title, []),
+        key=lambda e: (-(e.get("year") or 0), e.get("no") or 0),
+    )
+    if not items:
+        return ""
+    blocks = []
+    for e in items:
+        no = f'Q{e["no"]}. ' if e.get("no") else ""
+        blocks.append(
+            f'<details class="qa"><summary><span class="badge">{e["year"]}</span>'
+            f'<span class="q">{no}{html.escape(e["question"])}</span></summary>'
+            f'<div class="a">{render(e["answer"])}</div></details>'
+        )
+    return (
+        f'<section class="exams"><h2>기출 문제 <span class="count">{len(items)}</span></h2>'
+        + "".join(blocks)
+        + "</section>"
+    )
+
+
 PAGE = """<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -145,14 +215,22 @@ def nav_html(root, cur):
                 out.append(f'<li class="{cls}">{link(s)}</li>')
             out.append("</ul>")
         out.append("</li>")
-    return "".join(out) + "</ul>"
+    out.append("</ul>")
+    if ALL_EXAMS:
+        out.append(
+            f'<p class="nav-exam"><a href="exams.html">기출 문제 모아보기</a>'
+            f'<span>{len(ALL_EXAMS)}</span></p>'
+        )
+    return "".join(out)
 
 
 def kids_html(node):
     if not node.children:
         return ""
     items = "".join(
-        f'<li>{link(c)}<span>{html.escape(excerpt(c))}</span></li>' for c in node.children
+        f'<li><span class="kid-head">{link(c)}{badges_html(exam_years(c))}</span>'
+        f'<span>{html.escape(excerpt(c))}</span></li>'
+        for c in node.children
     )
     label = "세부 개념" if node.level == 2 else "세부 항목"
     return f'<h2 class="kids-h">{label}</h2><ul class="kids">{items}</ul>'
@@ -178,6 +256,7 @@ def build():
     assign_slugs(root)
     order = list(walk(root))
     site = html.escape(root.title or "학습 노트")
+    load_exams(order)
 
     if "--stubs" in sys.argv:
         EXTRA.mkdir(exist_ok=True)
@@ -201,6 +280,12 @@ def build():
 
     # 홈
     home = f"<h1>{site}</h1>" + (f'<p class="sub">{html.escape(root.subtitle)}</p>' if root.subtitle else "")
+    if ALL_EXAMS:
+        years = sorted({e["year"] for e in ALL_EXAMS if e.get("year")})
+        home += (
+            f'<p class="exam-link"><a href="exams.html">기출 문제 모아보기</a>'
+            f'<span>{len(ALL_EXAMS)}문항 · {len(years)}개 연도</span></p>'
+        )
     home += render(root.body) if root.body else ""
     for ch in root.children:
         secs = "".join(f"<li>{link(s)}</li>" for s in ch.children)
@@ -215,12 +300,43 @@ def build():
             p = p.parent
         crumbs += [link(a) for a in reversed(chain)]
         crumb_html = '<nav class="crumbs">' + " / ".join(crumbs) + "</nav>"
-        body = f"<h1>{html.escape(n.title)}</h1>" + render(n.body) + kids_html(n) + extra_html(n.slug)
+        body = (
+            f"<h1>{html.escape(n.title)}{badges_html(exam_years(n))}</h1>"
+            + render(n.body) + exam_html(n) + kids_html(n) + extra_html(n.slug)
+        )
         prev_ = f'<a class="prev" href="{order[i-1].slug}.html"><small>이전</small>{html.escape(order[i-1].title)}</a>' if i else "<span></span>"
         next_ = f'<a class="next" href="{order[i+1].slug}.html"><small>다음</small>{html.escape(order[i+1].title)}</a>' if i < len(order) - 1 else "<span></span>"
         write(n, body, crumb_html, f'<nav class="pager">{prev_}{next_}</nav>', f"{html.escape(n.title)} · {site}")
 
-    print(f"페이지 {len(order) + 1}개 생성 → {OUT}")
+    if ALL_EXAMS:
+        groups = {}
+        for e in ALL_EXAMS:
+            groups.setdefault(e["year"], []).append(e)
+        years = sorted(groups, reverse=True)
+        parts = ['<p class="sub">연도별로 정리한 기출 문항입니다. 문제를 눌러 답과 해설을 확인하세요.</p>']
+        for year in years:
+            items = sorted(groups[year], key=lambda e: e.get("no") or 0)
+            cards = "".join(
+                f'<article class="exam-card"><header><span class="badge">{year}</span>'
+                f'<span class="q-no">Q{e["no"]}.</span></header>'
+                f'<p class="q-text">{html.escape(e["question"])}</p>'
+                f'<details class="qa"><summary>답 보기</summary><div class="a">{render(e["answer"])}</div></details>'
+                f'<p class="to-concept">{link(e["node"])}</p></article>'
+                for e in items
+            )
+            label = items[0]["label"]
+            parts.append(
+                f'<section class="exam-year"><h2>{html.escape(label)} '
+                f'<span class="count">{len(items)}</span></h2>{cards}</section>'
+            )
+        crumbs = '<nav class="crumbs"><a href="index.html">홈</a> / 기출 문제</nav>'
+        body = "<h1>기출 문제 모아보기</h1>" + "".join(parts)
+        page = (PAGE.replace("__TITLE__", f"기출 문제 · {site}").replace("__SITE__", site)
+                .replace("__NAV__", nav_html(root, root)).replace("__CRUMBS__", crumbs)
+                .replace("__BODY__", body).replace("__PAGER__", "").replace("__SLUG__", "exams"))
+        (OUT / "exams.html").write_text(page, encoding="utf-8")
+
+    print(f"페이지 {len(order) + 1 + (1 if ALL_EXAMS else 0)}개 생성 → {OUT}")
 
 
 build()

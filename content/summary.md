@@ -966,7 +966,56 @@ public:
 
 Java는 JVM 위에서 동작하며 가비지 컬렉션, 인터페이스, 예외 처리를 제공한다. 임베디드에서는 자원 제약 때문에 C++를 선택적으로 사용하거나 Java ME/Android를 사용한다.
 
-### 4) 멀티미디어 정보처리
+### 4) 안드로이드 응용 개발
+
+안드로이드 애플리케이션은 **Java/Kotlin**으로 작성하며, 화면은 **XML 레이아웃**과 **액티비티(Activity)** 로 구성한다.
+
+- **View**: 화면을 구성하는 기본 요소 (TextView, Button, EditText, ImageView 등)
+- **Widget**: 사용자의 입력을 받는 컨트롤 역할의 View
+- **Layout**: View를 담아 배치하는 컨테이너 (LinearLayout, RelativeLayout, ConstraintLayout 등)
+- **Activity**: 하나의 화면을 담당하며 `setContentView()`로 레이아웃을 연결
+
+`res/layout/activity_main.xml`에 화면을 정의하고, 코드에서 `setContentView(R.layout.activity_main)`으로 표시한다.
+
+```xml
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hello Android" />
+
+    <Button
+        android:id="@+id/btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="확인" />
+</LinearLayout>
+```
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        findViewById<Button>(R.id.btn).setOnClickListener {
+            findViewById<TextView>(R.id.label).text = "눌렀습니다"
+        }
+    }
+}
+```
+
+- **매니페스트(AndroidManifest.xml)**: 액티비티, 권한, 앱 구성을 선언
+- **리소스**: `res/values/strings.xml`, `res/drawable/`, `res/layout/`에 문자열·이미지·화면을 분리
+- **4대 컴포넌트**: Activity, Service, Broadcast Receiver, Content Provider
+- **생명주기**: `onCreate → onStart → onResume → onPause → onStop → onDestroy`
+- **NDK/JNI**: C/C++ 네이티브 코드를 JNI로 호출해 하드웨어 제어나 성능이 중요한 부분을 구현
+
+### 5) 멀티미디어 정보처리
 
 **아날로그 → 디지털 변환**은 표본화(Sampling) → 양자화(Quantization) → 부호화(Encoding) 순서다.
 
